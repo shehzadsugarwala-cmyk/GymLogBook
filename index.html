@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GymLogBook</title>
+
+<style>
+body{
+    font-family:Arial,sans-serif;
+    background:#f4f4f4;
+    margin:20px;
+}
+
+.container{
+    max-width:1000px;
+    margin:auto;
+}
+
+.card{
+    background:white;
+    padding:15px;
+    margin-bottom:15px;
+    border-radius:10px;
+    box-shadow:0 2px 5px rgba(0,0,0,.1);
+}
+
+h1,h2{
+    margin-top:0;
+}
+
+input,select,textarea{
+    width:100%;
+    padding:8px;
+    margin-top:5px;
+    margin-bottom:10px;
+}
+
+button{
+    padding:10px 15px;
+    cursor:pointer;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+th,td{
+    border:1px solid #ddd;
+    padding:8px;
+}
+
+.export-box{
+    white-space:pre-wrap;
+    background:#eee;
+    padding:10px;
+    border-radius:5px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>🏋 GymLogBook</h1>
+
+<div class="card">
+<h2>Body Measurements</h2>
+
+<input type="number" id="weight" placeholder="Weight (kg)">
+<input type="number" id="neck" placeholder="Neck (inches)">
+<input type="number" id="chest" placeholder="Chest (inches)">
+<input type="number" id="waist" placeholder="Waist (inches)">
+<input type="number" id="hips" placeholder="Hips (inches)">
+<input type="number" id="arm" placeholder="Arm Flexed (inches)">
+<input type="number" id="thigh" placeholder="Thigh (inches)">
+
+<button onclick="saveMeasurements()">Save Measurements</button>
+
+<div id="latestMeasurements"></div>
+</div>
+
+<div class="card">
+<h2>Workout Logger</h2>
+
+<select id="workoutType">
+<option>Push</option>
+<option>Pull</option>
+<option>Legs + Core</option>
+<option>Rest</option>
+</select>
+
+<input type="text" id="exercise" placeholder="Exercise Name">
+
+<input type="number" id="weightUsed" placeholder="Weight Used (kg)">
+
+<input type="number" id="reps" placeholder="Reps">
+
+<input type="number" id="sets" placeholder="Sets">
+
+<button onclick="addWorkout()">Add Exercise</button>
+
+<div id="todayWorkout"></div>
+</div>
+
+<div class="card">
+<h2>Workout History</h2>
+<div id="history"></div>
+</div>
+
+<div class="card">
+<h2>Export For ChatGPT</h2>
+
+<button onclick="generateExport()">Generate Export</button>
+
+<div class="export-box" id="exportOutput"></div>
+</div>
+
+</div>
+
+<script>
+
+let measurements =
+JSON.parse(localStorage.getItem("measurements")) || [];
+
+let workouts =
+JSON.parse(localStorage.getItem("workouts")) || [];
+
+let todayWorkout =
+JSON.parse(localStorage.getItem("todayWorkout")) || [];
+
+function saveMeasurements(){
+
+const data={
+date:new Date().toLocaleDateString(),
+weight:document.getElementById("weight").value,
+neck:document.getElementById("neck").value,
+chest:document.getElementById("chest").value,
+waist:document.getElementById("waist").value,
+hips:document.getElementById("hips").value,
+arm:document.getElementById("arm").value,
+thigh:document.getElementById("thigh").value
+};
+
+measurements.push(data);
+
+localStorage.setItem(
+"measurements",
+JSON.stringify(measurements)
+);
+
+renderMeasurements();
+alert("Measurements Saved");
+}
+
+function renderMeasurements(){
+
+if(measurements.length===0)return;
+
+let m=measurements[measurements.length-1];
+
+document.getElementById("latestMeasurements").innerHTML=
+`
+<h3>Latest Measurements</h3>
+
+Weight: ${m.weight} kg<br>
+Neck: ${m.neck}"<br>
+Chest: ${m.chest}"<br>
+Waist: ${m.waist}"<br>
+Hips: ${m.hips}"<br>
+Arm: ${m.arm}"<br>
+Thigh: ${m.thigh}"
+`;
+}
+
+function addWorkout(){
+
+const item={
+exercise:document.getElementById("exercise").value,
+weight:document.getElementById("weightUsed").value,
+reps:document.getElementById("reps").value,
+sets:document.getElementById("sets").value
+};
+
+todayWorkout.push(item);
+
+localStorage.setItem(
+"todayWorkout",
+JSON.stringify(todayWorkout)
+);
+
+renderTodayWorkout();
+}
+
+function renderTodayWorkout(){
+
+let html="<h3>Today's Exercises</h3><table>";
+
+html+=`
+<tr>
+<th>Exercise</th>
+<th>Weight</th>
+<th>Reps</th>
+<th>Sets</th>
+</tr>
+`;
+
+todayWorkout.forEach(w=>{
+
+html+=`
+<tr>
+<td>${w.exercise}</td>
+<td>${w.weight}</td>
+<td>${w.reps}</td>
+<td>${w.sets}</td>
+</tr>
+`;
+
+});
+
+html+="</table>";
+
+html+=`
+<br>
+<button onclick="saveWorkoutDay()">
+Finish Workout Day
+</button>
+`;
+
+document.getElementById("todayWorkout").innerHTML=html;
+}
+
+function saveWorkoutDay(){
+
+const workoutDay={
+date:new Date().toLocaleDateString(),
+type:document.getElementById("workoutType").value,
+exercises:[...todayWorkout]
+};
+
+workouts.push(workoutDay);
+
+localStorage.setItem(
+"workouts",
+JSON.stringify(workouts)
+);
+
+todayWorkout=[];
+
+localStorage.setItem(
+"todayWorkout",
+JSON.stringify(todayWorkout)
+);
+
+renderTodayWorkout();
+renderHistory();
+
+alert("Workout Saved");
+}
+
+function renderHistory(){
+
+let html="";
+
+workouts.forEach(w=>{
+
+html+=`
+<div style="border:1px solid #ddd;padding:10px;margin-bottom:10px;">
+<b>${w.date}</b> - ${w.type}<br><br>
+`;
+
+w.exercises.forEach(e=>{
+
+html+=`
+${e.exercise}
+ - ${e.sets} x ${e.reps}
+ @ ${e.weight}kg
+<br>
+`;
+
+});
+
+html+="</div>";
+
+});
+
+document.getElementById("history").innerHTML=html;
+}
+
+function generateExport(){
+
+let txt="";
+
+txt+="Date: "+
+new Date().toLocaleDateString()+"\n\n";
+
+txt+="Workout: "+
+document.getElementById("workoutType").value+
+"\n\n";
+
+todayWorkout.forEach(e=>{
+
+txt+=e.exercise+"\n";
+
+txt+=e.sets+
+"x"+
+e.reps+
+" @ "+
+e.weight+
+"kg\n\n";
+
+});
+
+document.getElementById("exportOutput").innerText=txt;
+}
+
+renderMeasurements();
+renderTodayWorkout();
+renderHistory();
+
+</script>
+
+</body>
+</html>
