@@ -1,1 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GymLogBook V3</title>
+<style>
+body{font-family:Arial;margin:15px;background:#f5f5f5}
+.card{background:white;padding:15px;margin-bottom:12px;border-radius:10px}
+input,select,textarea,button{width:100%;padding:8px;margin:4px 0}
+table{width:100%;border-collapse:collapse}
+th,td{border:1px solid #ddd;padding:6px}
+pre{background:#eee;padding:10px;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<h1>🏋 GymLogBook V3</h1>
 
+<div class="card">
+<h2>Daily Check-In</h2>
+<input type="date" id="checkDate">
+<input type="number" id="weight" placeholder="Weight (kg)">
+<input type="number" id="steps" placeholder="Steps">
+<input type="number" id="calories" placeholder="Calories Burned">
+<input type="number" id="sleep" placeholder="Sleep Hours">
+<input type="number" id="energy" placeholder="Energy (1-10)">
+<input type="number" id="targetWeight" placeholder="Target Weight" value="80">
+<button onclick="saveCheckin()">Save Check-In</button>
+<div id="dashboard"></div>
+</div>
+
+<div class="card">
+<h2>Body Measurements</h2>
+<input type="date" id="mDate">
+<input placeholder="Neck" id="neck">
+<input placeholder="Chest" id="chest">
+<input placeholder="Waist" id="waist">
+<input placeholder="Hips" id="hips">
+<input placeholder="Right Arm" id="rarm">
+<input placeholder="Right Arm Flexed" id="rarmf">
+<input placeholder="Left Arm" id="larm">
+<input placeholder="Left Arm Flexed" id="larmf">
+<input placeholder="Right Thigh" id="rthigh">
+<input placeholder="Left Thigh" id="lthigh">
+<input placeholder="Right Calf" id="rcalf">
+<input placeholder="Left Calf" id="lcalf">
+<button onclick="saveMeasurement()">Save Measurements</button>
+<div id="measurementHistory"></div>
+</div>
+
+<div class="card">
+<h2>Workout Logger</h2>
+<input type="date" id="wDate">
+<select id="workoutType">
+<option>Push</option><option>Pull</option>
+<option>Legs + Core</option><option>Rest</option>
+</select>
+<input id="exercise" placeholder="Exercise">
+<input id="exWeight" placeholder="Weight">
+<input id="reps" placeholder="Reps">
+<input id="sets" placeholder="Sets">
+<button onclick="addExercise()">Add Exercise</button>
+<div id="exerciseTable"></div>
+<button onclick="saveWorkout()">Finish Workout</button>
+</div>
+
+<div class="card">
+<h2>Workout History</h2>
+<div id="history"></div>
+</div>
+
+<div class="card">
+<h2>ChatGPT Export</h2>
+<textarea id="notes" placeholder="Workout Notes"></textarea>
+<button onclick="makeExport()">Generate Export</button>
+<button onclick="copyExport()">Copy Export</button>
+<pre id="exportBox"></pre>
+</div>
+
+<script>
+let checkins=JSON.parse(localStorage.getItem('checkins')||'[]');
+let measurements=JSON.parse(localStorage.getItem('measurements')||'[]');
+let workouts=JSON.parse(localStorage.getItem('workouts')||'[]');
+let today=JSON.parse(localStorage.getItem('today')||'[]');
+
+function saveCheckin(){
+checkins.push({
+date:checkDate.value,weight:weight.value,steps:steps.value,
+calories:calories.value,sleep:sleep.value,energy:energy.value,target:targetWeight.value
+});
+localStorage.setItem('checkins',JSON.stringify(checkins));
+renderDashboard();
+}
+
+function renderDashboard(){
+if(!checkins.length)return;
+let c=checkins[checkins.length-1];
+let rem=(Number(c.weight)-Number(c.target)).toFixed(1);
+dashboard.innerHTML=`<b>Date:</b> ${c.date}<br>
+<b>Weight:</b> ${c.weight} kg<br>
+<b>Target:</b> ${c.target} kg<br>
+<b>Remaining:</b> ${rem} kg<br>
+<b>Steps:</b> ${c.steps}<br>
+<b>Calories:</b> ${c.calories}`;
+}
+
+function saveMeasurement(){
+measurements.push({
+date:mDate.value,neck:neck.value,chest:chest.value,waist:waist.value,hips:hips.value,
+rarm:rarm.value,rarmf:rarmf.value,larm:larm.value,larmf:larmf.value,
+rthigh:rthigh.value,lthigh:lthigh.value,rcalf:rcalf.value,lcalf:lcalf.value
+});
+localStorage.setItem('measurements',JSON.stringify(measurements));
+renderMeasurements();
+}
+
+function renderMeasurements(){
+let h="<table><tr><th>Date</th><th>Waist</th><th>Chest</th><th>Neck</th></tr>";
+measurements.forEach(m=>h+=`<tr><td>${m.date}</td><td>${m.waist}</td><td>${m.chest}</td><td>${m.neck}</td></tr>`);
+h+="</table>";
+measurementHistory.innerHTML=h;
+}
+
+function addExercise(){
+today.push({exercise:exercise.value,weight:exWeight.value,reps:reps.value,sets:sets.value});
+localStorage.setItem('today',JSON.stringify(today));
+renderToday();
+}
+
+function renderToday(){
+let h="<table><tr><th>Exercise</th><th>Weight</th><th>Reps</th><th>Sets</th></tr>";
+today.forEach(t=>h+=`<tr><td>${t.exercise}</td><td>${t.weight}</td><td>${t.reps}</td><td>${t.sets}</td></tr>`);
+h+="</table>";
+exerciseTable.innerHTML=h;
+}
+
+function saveWorkout(){
+workouts.push({date:wDate.value,type:workoutType.value,exercises:[...today]});
+localStorage.setItem('workouts',JSON.stringify(workouts));
+today=[];
+localStorage.setItem('today','[]');
+renderToday(); renderHistory();
+}
+
+function renderHistory(){
+let h="";
+workouts.forEach(w=>{
+h+=`<div><b>${w.date} - ${w.type}</b><br>`;
+w.exercises.forEach(e=>h+=`${e.exercise}: ${e.sets}x${e.reps} @ ${e.weight}kg<br>`);
+h+="<hr></div>";
+});
+history.innerHTML=h;
+}
+
+function makeExport(){
+let c=checkins[checkins.length-1]||{};
+let txt=`Date: ${wDate.value}\n\nBody Weight: ${c.weight||''}kg\nSteps: ${c.steps||''}\nCalories Burned: ${c.calories||''}\nSleep: ${c.sleep||''} hrs\nEnergy: ${c.energy||''}/10\n\nWorkout: ${workoutType.value}\n\n`;
+today.forEach(e=>txt+=`${e.exercise}\n${e.sets}x${e.reps} @ ${e.weight}kg\n\n`);
+txt+=`Notes: ${notes.value}`;
+exportBox.textContent=txt;
+}
+
+function copyExport(){navigator.clipboard.writeText(exportBox.textContent);alert('Copied');}
+
+let d=new Date().toISOString().split('T')[0];
+checkDate.value=d; mDate.value=d; wDate.value=d;
+renderDashboard(); renderMeasurements(); renderToday(); renderHistory();
+</script>
+</body>
+</html>
